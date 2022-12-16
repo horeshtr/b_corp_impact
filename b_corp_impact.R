@@ -26,3 +26,12 @@ data <- read.csv("https://query.data.world/s/qtnt2oj6vfmv43w5kcn4vlc5uf43fa",
 glimpse(data)
 head(data)
 
+length(unique(data$industry))
+length(unique(data$country))
+length(unique(data$state))
+length(unique(data$size))
+
+# industry_sum
+data %>%
+  ggplot(aes(x = size, y = overall_score)) +
+  geom_boxplot()
