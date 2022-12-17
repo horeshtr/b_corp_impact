@@ -26,6 +26,24 @@ data <- read.csv("https://query.data.world/s/qtnt2oj6vfmv43w5kcn4vlc5uf43fa",
 glimpse(data)
 head(data)
 
+# select only companies that are currently certified
+data_cert <- data %>%
+  filter(current_status == "certified")
+glimpse(data_cert)
+
+# select only the most current certification for each company
+data_cert <- data_cert %>%
+  group_by(company_id) %>%
+  filter(date_certified == max(date_certified)) %>%
+  ungroup()
+
+# create indices for columns to retain for summary and detailed datasets
+summary_col_index <- c(1, 2, 6:14, 18:23)
+detailed_col_index <- c(1, 3:5, 15:17, 24:134)
+
+# subset into summary and detailed datasets
+data_summary <- data_cert[,summary_col_index]
+data_detailed <- data_cert[,detailed_col_index]
 
 # --------------------------------------------------------------------- #
 #   Plots and Exploratory Analyses 
@@ -34,44 +52,55 @@ head(data)
 # Determine number of distinct values in key categorical fields
 col_index <- c(7:14)
 n_dist <- function(column){
-  n_distinct(data[,column])
+  n_distinct(data_summary[,column])
 }
 num_dist_values <- sapply(col_index, n_dist)
-num_dist_values <- matrix(num_dist_values, ncol = ncol(data[,col_index]))
-colnames(num_dist_values) <- colnames(data[,col_index])
+num_dist_values <- matrix(num_dist_values, ncol = ncol(data_summary[,col_index]))
+colnames(num_dist_values) <- colnames(data_summary[,col_index])
 num_dist_values <- as_tibble(num_dist_values)
 num_dist_values
 
 # Distribution and Scores by company size
-data %>%
+data_summary %>%
   ggplot(aes(x = size)) + 
   geom_histogram(stat = "count")
 
-data %>%
+data_summary %>%
   ggplot(aes(x = size, y = overall_score)) +
   geom_boxplot()
 
 # Distribution and Scores by company sector
-data %>%
+data_summary %>%
   ggplot(aes(x = sector)) + 
   geom_histogram(stat = "count") + 
   guides(x = guide_axis(angle = 45, n.dodge = 1))
 
-data %>%
+data_summary %>%
   ggplot(aes(x = sector, y = overall_score)) +
   geom_boxplot() + 
   guides(x = guide_axis(angle = 45, n.dodge = 1))
 
 # Distribution and Scores by industry_category
-data %>%
+data_summary %>%
   ggplot(aes(x = industry_category)) + 
   geom_histogram(stat = "count") + 
   guides(x = guide_axis(angle = 45, n.dodge = 1))
 
-data %>%
+data_summary %>%
   ggplot(aes(x = industry_category, y = overall_score)) +
   geom_boxplot() + 
   guides(x = guide_axis(angle = 45, n.dodge = 1))
+
+
+# --------------------------------------------------------------------- #
+#   TEST
+# ----------------------------------------------------------------------#
+location_data <- data_summary %>% 
+  select(company_id, company_name, industry, products_and_services, overall_score,
+         city, state, country) %>%
+  filter(industry == "Apparel") %>%
+  mutate(location = paste(city, state, country, sep = ", "))
+location_data$location
 
 
 # --------------------------------------------------------------------- #
@@ -87,14 +116,35 @@ ui <- fluidPage(
   # Sidebar with industry, product, and top N selectors 
   sidebarLayout(
     sidebarPanel(
-      selectInput("industry", "Select an industry:", choices = unique(data$industry)),
-      textInput("product", "Search for a product:", value = "Ex: coffee"),
-      sliderInput("top_n", "Select the number of top companies", min = 1, max = 10, value = 5, step = 1)
+      selectInput(
+        inputId = "industry", 
+        label = "Select an industry:",
+        choices = unique(data_summary$industry)
+        ),
+      textInput(
+        inputId = "product",
+        label = "Search for a product:",
+        placeholder = "Ex: coffee"
+        ),
+      sliderInput(
+        inputId = "top_n",
+        label = "Select the number of top companies", 
+        min = 1, max = 10, value = 5, step = 1
+        )
     ),
     
-    # Show a plot and table
+    # Show a plot of top N companies by score, text descriptions of companies, and their locations
     mainPanel(
-      #
+      # Top_N Plot
+      plotOutput(outputId = "score"),
+      
+      # Location Info
+      h2("Company Location"),
+      tableOutput(outputId = "location")#,
+      
+      # Description
+      # h2("Company Description"),
+      # textOutput(outputId = "description")
     )
   )
 )
@@ -103,37 +153,34 @@ ui <- fluidPage(
 server <- function(input, output) {
   # Plot the top N companies by overall score
   output$score <- renderPlot({
-    data %>% 
+    data_summary %>% 
       select(company_id, company_name, industry, products_and_services, overall_score) %>%
-      filter(industry == input$industry,
-             input$product %in% description
-      ) %>%
-      top_n(overall_score, input$top_n)
+      filter(industry == input$industry) %>%
+      top_n(input$top_n, overall_score) %>%
+      arrange(desc(overall_score)) %>%
       ggplot() + 
-      geom_col(aes(overall_score, company_name)) +
+      geom_col(aes(x = overall_score, y = reorder(company_name, overall_score))) +
       labs(
-        x = "Company",
-        y = "Overall Score"
+        x = "Overall Score",
+        y = "Company"
       )
+  })
+  
+  # Output company location
+  output$location <- renderTable({
+    location_data <- data_summary %>% 
+      filter(industry == input$industry) %>%
+      top_n(input$top_n, overall_score) %>%
+      arrange(desc(overall_score)) %>%
+      mutate(location = paste(city, state, country, sep = ", ")) %>%
+      select(company_name, location)
   })
   
   # Output company description
-  output$description <- renderText({
-    data %>%
-      filter(state == input$state,
-             date >= input$dates[1], 
-             date <= input$dates[2]
-      ) %>%
-      group_by(shape) %>%
-      summarize(num_sightings = n(),
-                #min_duration = min(duration),
-                #max_duration = max(duration),
-                #avg_duration = mean(duration),
-                #median_duration = median(duration)
-      )
-  })
-  
-  
+  # output$description <- renderText({
+  #   products_search <- data_summary[str_detect(data_summary$description, input$product),]
+  #   products_search %>% paste(products_search$description)
+  # })
 }
 
 # Run the application 
