@@ -6,14 +6,16 @@
 #   Date:     December 2022
 #------------------------------------------------------------------#
 
-if(!require(shiny)) install.packages("shiny", repos = "http://cran.us.r-project.org")
-if(!require(ggplot2)) install.packages("ggplot2", repos = "http://cran.us.r-project.org")
-if(!require(dplyr)) install.packages("dplyr", repos = "http://cran.us.r-project.org")
-if(!require(lubridate)) install.packages("lubridate", repos = "http://cran.us.r-project.org")
-if(!require(stringr)) install.packages("stringr", repos = "http://cran.us.r-project.org")
+if(!require(shiny)) install.packages("shiny", repos = "https://cran.us.r-project.org")
+if(!require(ggplot2)) install.packages("ggplot2", repos = "https://cran.us.r-project.org")
+if(!require(plotly)) install.packages("plotly", repos = "https://cran.us.r-project.org")
+if(!require(dplyr)) install.packages("dplyr", repos = "https://cran.us.r-project.org")
+if(!require(lubridate)) install.packages("lubridate", repos = "https://cran.us.r-project.org")
+if(!require(stringr)) install.packages("stringr", repos = "https://cran.us.r-project.org")
 
 library(shiny)
 library(ggplot2)
+library(plotly)
 library(dplyr)
 library(lubridate)
 library(stringr)
@@ -97,6 +99,9 @@ data_summary %>%
 # ----------------------------------------------------------------------#
 products_search <- data_summary[str_detect(data_summary$description, input$product),]
 products_search %>% paste(products_search$description)
+
+#subset(data_summary, input$product %in% description)
+
 
 
 # --------------------------------------------------------------------- #
