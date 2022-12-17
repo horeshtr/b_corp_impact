@@ -95,12 +95,8 @@ data_summary %>%
 # --------------------------------------------------------------------- #
 #   TEST
 # ----------------------------------------------------------------------#
-location_data <- data_summary %>% 
-  select(company_id, company_name, industry, products_and_services, overall_score,
-         city, state, country) %>%
-  filter(industry == "Apparel") %>%
-  mutate(location = paste(city, state, country, sep = ", "))
-location_data$location
+products_search <- data_summary[str_detect(data_summary$description, input$product),]
+products_search %>% paste(products_search$description)
 
 
 # --------------------------------------------------------------------- #
@@ -136,15 +132,16 @@ ui <- fluidPage(
     # Show a plot of top N companies by score, text descriptions of companies, and their locations
     mainPanel(
       # Top_N Plot
+      h2("Company Score"),
       plotOutput(outputId = "score"),
       
       # Location Info
       h2("Company Location"),
-      tableOutput(outputId = "location")#,
+      tableOutput(outputId = "location"),
       
       # Description
-      # h2("Company Description"),
-      # textOutput(outputId = "description")
+      h2("Company Description"),
+      tableOutput(outputId = "description")
     )
   )
 )
@@ -177,10 +174,13 @@ server <- function(input, output) {
   })
   
   # Output company description
-  # output$description <- renderText({
-  #   products_search <- data_summary[str_detect(data_summary$description, input$product),]
-  #   products_search %>% paste(products_search$description)
-  # })
+  output$description <- renderTable({
+    description_data <- data_summary %>% 
+      filter(industry == input$industry) %>%
+      top_n(input$top_n, overall_score) %>%
+      arrange(desc(overall_score)) %>%
+      select(company_name, description)
+  })
 }
 
 # Run the application 
