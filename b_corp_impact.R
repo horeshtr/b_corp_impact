@@ -127,17 +127,18 @@ data_summary %>%
   filter(is.na(latitude) == TRUE | is.na(longitude) == TRUE) %>% 
   select(company_id, latitude, longitude)
 
+# Title formatting
+#, style = "text-align: center; background: #1f9e89; color: white;"
 
-points <- data_summary %>% 
-  filter(industry == "Apparel") %>%
-  top_n(10, overall_score) %>%
-  arrange(desc(overall_score)) %>%
-  select(company_name, latitude, longitude)
-points
+# Top N and Description formatting
+# cellArgs = list(style = "padding: 5px; border: 1px darkgray;"),
 
-leaflet() %>%
-  addTiles() %>%  
-  addMarkers(lng = points$longitude, lat = points$latitude, popup = points$company_name)
+# Location formatting
+# style = "border: 1px darkgray;",
+# cellArgs = list(style = "padding: 5px"),
+
+# Plot fill code
+#, fill = "#31688e"
 
 
 # --------------------------------------------------------------------- #
@@ -147,11 +148,11 @@ leaflet() %>%
 # Define UI for application that draws a histogram
 ui <- fluidPage(
   
-  # Apply theme
-  theme = bs_theme(bootswatch = "flatly"),
-  
   # Application title
-  titlePanel("B Corp Impact Data"),
+  h1("Find a B Corp", style = "text-align: center; background: #1f9e89; color: white;"),
+  
+  #Subtitle
+  h4(em("based on industry and impact"), style = "text-align: center; background: #1f9e89; color: white;"),
   
   # Sidebar with industry, product, and top N selectors 
   sidebarLayout(
@@ -189,7 +190,7 @@ ui <- fluidPage(
       fluidRow(
         splitLayout(
           cellWidths = c("50%", "50%"),
-          cellArgs = list(style = "padding: 5px; border: 1px solid darkgray;"),
+          
           
           # Top_N Plot
           plotOutput(outputId = "score"),
@@ -206,9 +207,9 @@ ui <- fluidPage(
       
       fluidRow(
         splitLayout(
-          style = "border: 1px solid darkgray;",
+          
           cellWidths = c("50%", "50%"),
-          cellArgs = list(style = "padding: 5px"),
+          
         
           # Location Info
           leafletOutput(outputId = "map"),
@@ -222,8 +223,9 @@ ui <- fluidPage(
   )
 )
 
-# Define server logic required to draw a histogram
+# Define server logic
 server <- function(input, output) {
+  
   # Plot the top N companies by overall score
   output$score <- renderPlot({
     data_summary %>% 
@@ -258,7 +260,11 @@ server <- function(input, output) {
     
     leaflet() %>%
       addTiles() %>%  
-      addMarkers(lng = points$longitude, lat = points$latitude, popup = points$company_name)
+      addMarkers(
+        lng = points$longitude, 
+        lat = points$latitude, 
+        popup = points$company_name
+      )
   })
   
   # Output company location table
