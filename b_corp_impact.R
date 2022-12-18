@@ -7,6 +7,7 @@
 #------------------------------------------------------------------#
 
 if(!require(shiny)) install.packages("shiny", repos = "https://cran.us.r-project.org")
+if(!require(bslib)) install.packages("bslib", repos = "https://cran.us.r-project.org")
 if(!require(ggplot2)) install.packages("ggplot2", repos = "https://cran.us.r-project.org")
 if(!require(plotly)) install.packages("plotly", repos = "https://cran.us.r-project.org")
 if(!require(leaflet)) install.packages("leaflet", repos = "https://cran.us.r-project.org")
@@ -16,6 +17,7 @@ if(!require(stringr)) install.packages("stringr", repos = "https://cran.us.r-pro
 if(!require(tidygeocoder)) install.packages("tidygeocoder", repos = "https://cran.us.r-project.org")
 
 library(shiny)
+library(bslib)
 library(ggplot2)
 library(plotly)
 library(leaflet)
@@ -145,6 +147,9 @@ leaflet() %>%
 # Define UI for application that draws a histogram
 ui <- fluidPage(
   
+  # Apply theme
+  theme = bs_theme(bootswatch = "flatly"),
+  
   # Application title
   titlePanel("B Corp Impact Data"),
   
@@ -165,23 +170,54 @@ ui <- fluidPage(
         inputId = "top_n",
         label = "Select the number of top companies", 
         min = 1, max = 10, value = 5, step = 1
-        )
+        ),
+      width = 3
     ),
     
     # Show a plot of top N companies by score, text descriptions of companies, and their locations
     mainPanel(
-      # Top_N Plot
-      h2("Company Score"),
-      plotOutput(outputId = "score"),
+      fluidRow(
+        splitLayout(
+          cellWidths = c("50%", "50%"),
+          
+          # Section Titles
+          h3("Company Score"),
+          h3("Company Description"),
+        )
+      ),
       
-      # Location Info
-      h2("Company Location"),
-      leafletOutput(outputId = "map"),
-      tableOutput(outputId = "location"),
+      fluidRow(
+        splitLayout(
+          cellWidths = c("50%", "50%"),
+          cellArgs = list(style = "padding: 5px; border: 1px solid darkgray;"),
+          
+          # Top_N Plot
+          plotOutput(outputId = "score"),
+        
+          # Description
+          tableOutput(outputId = "description")
+        )
+      ),
       
-      # Description
-      h2("Company Description"),
-      tableOutput(outputId = "description")
+      fluidRow(
+        # Section Title
+        h3("Company Location")
+      ),
+      
+      fluidRow(
+        splitLayout(
+          style = "border: 1px solid darkgray;",
+          cellWidths = c("50%", "50%"),
+          cellArgs = list(style = "padding: 5px"),
+        
+          # Location Info
+          leafletOutput(outputId = "map"),
+          tableOutput(outputId = "location")
+        )
+      ),
+      
+      # Set overall Main Panel dimensions
+      width = 9
     )
   )
 )
@@ -201,6 +237,15 @@ server <- function(input, output) {
         x = "Overall Score",
         y = "Company"
       )
+  })
+  
+  # Output company description
+  output$description <- renderTable({
+    description_data <- data_summary %>% 
+      filter(industry == input$industry) %>%
+      top_n(input$top_n, overall_score) %>%
+      arrange(desc(overall_score)) %>%
+      select(company_name, description)
   })
   
   # Output company location map
@@ -224,15 +269,6 @@ server <- function(input, output) {
       arrange(desc(overall_score)) %>%
       mutate(location = paste(city, state, country, sep = ", ")) %>%
       select(company_name, location)
-  })
-  
-  # Output company description
-  output$description <- renderTable({
-    description_data <- data_summary %>% 
-      filter(industry == input$industry) %>%
-      top_n(input$top_n, overall_score) %>%
-      arrange(desc(overall_score)) %>%
-      select(company_name, description)
   })
 }
 
