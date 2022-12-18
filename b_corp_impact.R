@@ -9,16 +9,21 @@
 if(!require(shiny)) install.packages("shiny", repos = "https://cran.us.r-project.org")
 if(!require(ggplot2)) install.packages("ggplot2", repos = "https://cran.us.r-project.org")
 if(!require(plotly)) install.packages("plotly", repos = "https://cran.us.r-project.org")
+if(!require(leaflet)) install.packages("leaflet", repos = "https://cran.us.r-project.org")
 if(!require(dplyr)) install.packages("dplyr", repos = "https://cran.us.r-project.org")
 if(!require(lubridate)) install.packages("lubridate", repos = "https://cran.us.r-project.org")
 if(!require(stringr)) install.packages("stringr", repos = "https://cran.us.r-project.org")
+if(!require(tidygeocoder)) install.packages("tidygeocoder", repos = "https://cran.us.r-project.org")
 
 library(shiny)
 library(ggplot2)
 library(plotly)
+library(leaflet)
 library(dplyr)
 library(lubridate)
 library(stringr)
+library(tidygeocoder)
+library(tidyverse)
 
 data <- read.csv("https://query.data.world/s/qtnt2oj6vfmv43w5kcn4vlc5uf43fa", 
                  header=TRUE, 
@@ -29,23 +34,30 @@ glimpse(data)
 head(data)
 
 # select only companies that are currently certified
-data_cert <- data %>%
+data <- data %>%
   filter(current_status == "certified")
-glimpse(data_cert)
 
 # select only the most current certification for each company
-data_cert <- data_cert %>%
+data <- data %>%
   group_by(company_id) %>%
   filter(date_certified == max(date_certified)) %>%
   ungroup()
 
+# add lat/long data
+data <- data %>%
+  geocode(city = city,
+          country = country,
+          method = "osm", 
+          lat = latitude,
+          long = longitude)
+
 # create indices for columns to retain for summary and detailed datasets
-summary_col_index <- c(1, 2, 6:14, 18:23)
+summary_col_index <- c(1, 2, 6:14, 18:23, 135, 136)
 detailed_col_index <- c(1, 3:5, 15:17, 24:134)
 
 # subset into summary and detailed datasets
-data_summary <- data_cert[,summary_col_index]
-data_detailed <- data_cert[,detailed_col_index]
+data_summary <- data[,summary_col_index]
+data_detailed <- data[,detailed_col_index]
 
 # --------------------------------------------------------------------- #
 #   Plots and Exploratory Analyses 
@@ -97,12 +109,16 @@ data_summary %>%
 # --------------------------------------------------------------------- #
 #   TEST
 # ----------------------------------------------------------------------#
-products_search <- data_summary[str_detect(data_summary$description, input$product),]
-products_search %>% paste(products_search$description)
+
+# products_search <- data_summary[str_detect(data_summary$description, input$product),]
+# products_search %>% paste(products_search$description)
 
 #subset(data_summary, input$product %in% description)
 
-
+# for re-ordering size values, check this source: 
+#   https://r-graph-gallery.com/267-reorder-a-variable-in-ggplot2.html
+  
+data_summary %>% filter(is.na(latitude) == TRUE | is.na(longitude) == TRUE) %>% select(company_id, latitude, longitude)
 
 # --------------------------------------------------------------------- #
 #   Shiny App Code
@@ -143,6 +159,7 @@ ui <- fluidPage(
       # Location Info
       h2("Company Location"),
       tableOutput(outputId = "location"),
+      leafletOutput(outputId = "map"),
       
       # Description
       h2("Company Description"),
@@ -168,7 +185,7 @@ server <- function(input, output) {
       )
   })
   
-  # Output company location
+  # Output company location table
   output$location <- renderTable({
     location_data <- data_summary %>% 
       filter(industry == input$industry) %>%
@@ -176,6 +193,22 @@ server <- function(input, output) {
       arrange(desc(overall_score)) %>%
       mutate(location = paste(city, state, country, sep = ", ")) %>%
       select(company_name, location)
+  })
+  
+  # Output company location map
+  output$map <- renderLeaflet({
+    company_coord <- data_summary %>% 
+      filter(industry == input$industry) %>%
+      top_n(input$top_n, overall_score) %>%
+      arrange(desc(overall_score)) %>%
+      geo(city = city, state = state, country = country, method = "osm")
+    
+    leaflet(
+      location_data <- data_summary %>% 
+        filter(industry == input$industry) %>%
+        top_n(input$top_n, overall_score) %>%
+        arrange(desc(overall_score))
+      )
   })
   
   # Output company description
