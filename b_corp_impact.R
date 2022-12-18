@@ -51,6 +51,9 @@ data <- data %>%
           lat = latitude,
           long = longitude)
 
+# function to check whether lat/long call is needed?
+
+
 # create indices for columns to retain for summary and detailed datasets
 summary_col_index <- c(1, 2, 6:14, 18:23, 135, 136)
 detailed_col_index <- c(1, 3:5, 15:17, 24:134)
@@ -118,7 +121,22 @@ data_summary %>%
 # for re-ordering size values, check this source: 
 #   https://r-graph-gallery.com/267-reorder-a-variable-in-ggplot2.html
   
-data_summary %>% filter(is.na(latitude) == TRUE | is.na(longitude) == TRUE) %>% select(company_id, latitude, longitude)
+data_summary %>% 
+  filter(is.na(latitude) == TRUE | is.na(longitude) == TRUE) %>% 
+  select(company_id, latitude, longitude)
+
+
+points <- data_summary %>% 
+  filter(industry == "Apparel") %>%
+  top_n(10, overall_score) %>%
+  arrange(desc(overall_score)) %>%
+  select(company_name, latitude, longitude)
+points
+
+leaflet() %>%
+  addTiles() %>%  
+  addMarkers(lng = points$longitude, lat = points$latitude, popup = points$company_name)
+
 
 # --------------------------------------------------------------------- #
 #   Shiny App Code
@@ -158,8 +176,8 @@ ui <- fluidPage(
       
       # Location Info
       h2("Company Location"),
-      tableOutput(outputId = "location"),
       leafletOutput(outputId = "map"),
+      tableOutput(outputId = "location"),
       
       # Description
       h2("Company Description"),
@@ -185,6 +203,19 @@ server <- function(input, output) {
       )
   })
   
+  # Output company location map
+  output$map <- renderLeaflet({
+    points <- data_summary %>% 
+      filter(industry == input$industry) %>%
+      top_n(input$top_n, overall_score) %>%
+      arrange(desc(overall_score)) %>%
+      select(company_name, latitude, longitude)
+    
+    leaflet() %>%
+      addTiles() %>%  
+      addMarkers(lng = points$longitude, lat = points$latitude, popup = points$company_name)
+  })
+  
   # Output company location table
   output$location <- renderTable({
     location_data <- data_summary %>% 
@@ -193,22 +224,6 @@ server <- function(input, output) {
       arrange(desc(overall_score)) %>%
       mutate(location = paste(city, state, country, sep = ", ")) %>%
       select(company_name, location)
-  })
-  
-  # Output company location map
-  output$map <- renderLeaflet({
-    company_coord <- data_summary %>% 
-      filter(industry == input$industry) %>%
-      top_n(input$top_n, overall_score) %>%
-      arrange(desc(overall_score)) %>%
-      geo(city = city, state = state, country = country, method = "osm")
-    
-    leaflet(
-      location_data <- data_summary %>% 
-        filter(industry == input$industry) %>%
-        top_n(input$top_n, overall_score) %>%
-        arrange(desc(overall_score))
-      )
   })
   
   # Output company description
