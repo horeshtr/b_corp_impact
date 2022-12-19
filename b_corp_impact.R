@@ -7,6 +7,7 @@
 #------------------------------------------------------------------#
 
 if(!require(shiny)) install.packages("shiny", repos = "https://cran.us.r-project.org")
+if(!require(shinydashboard)) install.packages("shiny", repos = "https://cran.us.r-project.org")
 if(!require(bslib)) install.packages("bslib", repos = "https://cran.us.r-project.org")
 if(!require(ggplot2)) install.packages("ggplot2", repos = "https://cran.us.r-project.org")
 if(!require(plotly)) install.packages("plotly", repos = "https://cran.us.r-project.org")
@@ -17,6 +18,7 @@ if(!require(stringr)) install.packages("stringr", repos = "https://cran.us.r-pro
 if(!require(tidygeocoder)) install.packages("tidygeocoder", repos = "https://cran.us.r-project.org")
 
 library(shiny)
+library(shinydashboard)
 library(bslib)
 library(ggplot2)
 library(plotly)
@@ -130,6 +132,9 @@ data_summary %>%
 # Title formatting
 #, style = "text-align: center; background: #1f9e89; color: white;"
 
+#Subtitle
+#h4(em("based on industry and impact")),
+
 # Top N and Description formatting
 # cellArgs = list(style = "padding: 5px; border: 1px darkgray;"),
 
@@ -146,79 +151,60 @@ data_summary %>%
 # ----------------------------------------------------------------------#
 
 # Define UI for application that draws a histogram
-ui <- fluidPage(
+ui <- dashboardPage(
 
   # Application title
-  titlePanel("Find a B Corp", windowTitle = "Shiny App to Find a B Corp"),
-  
-  #Subtitle
-  h4(em("based on industry and impact")),
+  dashboardHeader(title = "Find a B Corp"),
   
   # Sidebar with industry, product, and top N selectors 
-  sidebarLayout(
-    sidebarPanel(
-      selectInput(
-        inputId = "industry", 
-        label = "Select an industry:",
-        choices = unique(data_summary$industry)
-        ),
-      textInput(
-        inputId = "product",
-        label = "Search for a product:",
-        placeholder = "Ex: coffee"
-        ),
-      sliderInput(
-        inputId = "top_n",
-        label = "Select the number of top companies", 
-        min = 1, max = 10, value = 5, step = 1
-        ),
-      width = 3
+  dashboardSidebar(
+    selectInput(
+      inputId = "industry", 
+      label = "Select an industry:",
+      choices = unique(data_summary$industry)
+      ),
+    textInput(
+      inputId = "product",
+      label = "Search for a product:",
+      placeholder = "Ex: coffee"
+      ),
+    sliderInput(
+      inputId = "top_n",
+      label = "Select the number of top companies", 
+      min = 1, max = 10, value = 5, step = 1
+      )
+  ),
+    
+  # Show a plot of top N companies by score, text descriptions of companies, and their locations
+  dashboardBody(
+    fluidRow(
+      infoBoxOutput(outputId = "company_count"),
+      infoBoxOutput(outputId = "tot_company_count")
     ),
     
-    # Show a plot of top N companies by score, text descriptions of companies, and their locations
-    mainPanel(
-      fluidRow(
-        splitLayout(
-          cellWidths = c("50%", "50%"),
-          
-          # Section Titles
-          h3("Company Score"),
-          h3("Company Description"),
-        )
+    fluidRow(
+      # Top_N Plot
+      box(
+        title = "Company Score",
+        plotOutput(outputId = "score")
       ),
-      
-      fluidRow(
-        splitLayout(
-          cellWidths = c("50%", "50%"),
-          
-          
-          # Top_N Plot
-          plotOutput(outputId = "score"),
-        
-          # Description
-          tableOutput(outputId = "description")
-        )
-      ),
-      
-      fluidRow(
-        # Section Title
-        h3("Company Location")
-      ),
-      
-      fluidRow(
-        splitLayout(
-          
-          cellWidths = c("50%", "50%"),
-          
-        
-          # Location Info
-          leafletOutput(outputId = "map"),
-          tableOutput(outputId = "location")
-        )
-      ),
-      
-      # Set overall Main Panel dimensions
-      width = 9
+    
+      # Description
+      box(
+        title = "Company Description",
+        tableOutput(outputId = "description")
+      )
+    ),
+    
+    fluidRow(
+      # Section Title
+      h3("Company Location")
+    ),
+    
+    fluidRow(
+      # Location Info
+      box(leafletOutput(outputId = "map")),
+      box(tableOutput(outputId = "location"))
     )
   )
 )
@@ -231,6 +217,30 @@ server <- function(input, output) {
       filter(industry == input$industry) %>%
       top_n(input$top_n, overall_score) %>%
       arrange(desc(overall_score))
+  })
+  
+  # Value output for number of companies in selected industry
+  output$company_count <- renderValueBox({
+    company_count <- data_summary %>%
+      filter(industry == input$industry) %>%
+      count()
+    
+    valueBox(
+      value = company_count,
+      subtitle = "Companies in Selected Industry",
+      width = 4
+    )
+  })
+  
+  # Value output for total number of companies in dataset
+  output$tot_company_count <- renderValueBox({
+    total_comp_count <- nrow(data_summary)
+    
+    valueBox(
+      value = total_comp_count,
+      subtitle = "Companies in Dataset",
+      width = 4
+    )
   })
   
   # Plot the top N companies by overall score
