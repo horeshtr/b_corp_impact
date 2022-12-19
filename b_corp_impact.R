@@ -153,6 +153,9 @@ data_summary %>%
 # Define UI for application that draws a histogram
 ui <- dashboardPage(
 
+  # Change overall appearance
+  skin = "purple",
+  
   # Application title
   dashboardHeader(title = "Find a B Corp"),
   
@@ -228,6 +231,7 @@ server <- function(input, output) {
     valueBox(
       value = company_count,
       subtitle = "Companies in Selected Industry",
+      color = "light-blue",
       width = 4
     )
   })
@@ -239,7 +243,8 @@ server <- function(input, output) {
     valueBox(
       value = total_comp_count,
       subtitle = "Companies in Dataset",
-      width = 4
+      color = "light-blue",
+      width = 6
     )
   })
   
