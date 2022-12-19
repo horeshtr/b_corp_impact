@@ -147,12 +147,12 @@ data_summary %>%
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
-  
+
   # Application title
-  h1("Find a B Corp", style = "text-align: center; background: #1f9e89; color: white;"),
+  titlePanel("Find a B Corp", windowTitle = "Shiny App to Find a B Corp"),
   
   #Subtitle
-  h4(em("based on industry and impact"), style = "text-align: center; background: #1f9e89; color: white;"),
+  h4(em("based on industry and impact")),
   
   # Sidebar with industry, product, and top N selectors 
   sidebarLayout(
@@ -226,13 +226,18 @@ ui <- fluidPage(
 # Define server logic
 server <- function(input, output) {
   
-  # Plot the top N companies by overall score
-  output$score <- renderPlot({
+  data_filtered <- reactive({
     data_summary %>% 
-      select(company_id, company_name, industry, products_and_services, overall_score) %>%
       filter(industry == input$industry) %>%
       top_n(input$top_n, overall_score) %>%
-      arrange(desc(overall_score)) %>%
+      arrange(desc(overall_score))
+  })
+  
+  # Plot the top N companies by overall score
+  output$score <- renderPlot({
+    data_filtered() %>% 
+      select(company_id, company_name, industry, products_and_services, overall_score) %>%
+      
       ggplot() + 
       geom_col(aes(x = overall_score, y = reorder(company_name, overall_score))) +
       labs(
@@ -243,19 +248,13 @@ server <- function(input, output) {
   
   # Output company description
   output$description <- renderTable({
-    description_data <- data_summary %>% 
-      filter(industry == input$industry) %>%
-      top_n(input$top_n, overall_score) %>%
-      arrange(desc(overall_score)) %>%
+    description_data <- data_filtered() %>% 
       select(company_name, description)
   })
   
   # Output company location map
   output$map <- renderLeaflet({
-    points <- data_summary %>% 
-      filter(industry == input$industry) %>%
-      top_n(input$top_n, overall_score) %>%
-      arrange(desc(overall_score)) %>%
+    points <- data_filtered() %>% 
       select(company_name, latitude, longitude)
     
     leaflet() %>%
@@ -269,10 +268,7 @@ server <- function(input, output) {
   
   # Output company location table
   output$location <- renderTable({
-    location_data <- data_summary %>% 
-      filter(industry == input$industry) %>%
-      top_n(input$top_n, overall_score) %>%
-      arrange(desc(overall_score)) %>%
+    location_data <- data_filtered() %>% 
       mutate(location = paste(city, state, country, sep = ", ")) %>%
       select(company_name, location)
   })
