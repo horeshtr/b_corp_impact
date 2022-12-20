@@ -20,10 +20,7 @@ if(!require(tidygeocoder)) install.packages("tidygeocoder", repos = "https://cra
 
 library(shiny)
 library(shinydashboard)
-library(DT)
-library(bslib)
 library(ggplot2)
-library(plotly)
 library(leaflet)
 library(dplyr)
 library(lubridate)
@@ -31,34 +28,77 @@ library(stringr)
 library(tidygeocoder)
 library(tidyverse)
 
+setwd("/Users/GreenTea/projects/b_corp_impact")
+
 data <- read.csv("https://query.data.world/s/qtnt2oj6vfmv43w5kcn4vlc5uf43fa", 
-                 header=TRUE, 
-                 stringsAsFactors=FALSE,
-                 na.strings = c("", " ")
-                )
+                header=TRUE,
+                stringsAsFactors=FALSE,
+                na.strings = c("", " ")
+               )
+
+ # select only companies that are currently certified
+ data <- data %>%
+   filter(current_status == "certified")
+
+ # select only the most current certification for each company
+ data <- data %>%
+   group_by(company_id) %>%
+   filter(date_certified == max(date_certified)) %>%
+   ungroup()
+
+ # add lat/long data
+ data <- data %>%
+   geocode(city = city,
+           country = country,
+           method = "osm",
+           lat = latitude,
+           long = longitude,
+           timeout = 40)
+
+
+#######################################################################################
+# data <- 
+#   if (file.exists("b_corp_impact_data_with_lat_long.csv")) {
+#     read.csv("b_corp_impact_data_with_lat_long.csv", 
+#              header=TRUE, 
+#              stringsAsFactors=FALSE,
+#              na.strings = c("", " ")
+#     )
+#   } else {
+#       read.csv("https://query.data.world/s/qtnt2oj6vfmv43w5kcn4vlc5uf43fa", 
+#                      header=TRUE, 
+#                      stringsAsFactors=FALSE,
+#                      na.strings = c("", " ")
+#                     )
+#     
+#       # select only companies that are currently certified
+#       data <- data %>%
+#         filter(current_status == "certified")
+#       
+#       # select only the most current certification for each company
+#       data <- data %>%
+#         group_by(company_id) %>%
+#         filter(date_certified == max(date_certified)) %>%
+#         ungroup()
+#       
+#       # add lat/long data
+#       data <- head(data, n = 10) %>%
+#         geocode(city = city,
+#                 country = country,
+#                 method = "osm", 
+#                 lat = latitude,
+#                 long = longitude,
+#                 timeout = 40)
+#       
+#       # save dataset with lat/long details
+#       write_csv(data, "b_corp_impact_data_with_lat_long.csv", quote = "needed")
+#   }
+ #######################################################################################
+
+
+# take an initial look at the data
 glimpse(data)
 head(data)
-
-# select only companies that are currently certified
-data <- data %>%
-  filter(current_status == "certified")
-
-# select only the most current certification for each company
-data <- data %>%
-  group_by(company_id) %>%
-  filter(date_certified == max(date_certified)) %>%
-  ungroup()
-
-# add lat/long data
-data <- data %>%
-  geocode(city = city,
-          country = country,
-          method = "osm", 
-          lat = latitude,
-          long = longitude)
-
-# function to check whether lat/long call is needed?
-
 
 # create indices for columns to retain for summary and detailed datasets
 summary_col_index <- c(1, 2, 6:14, 18:23, 135, 136)
@@ -198,15 +238,15 @@ ui <- dashboardPage(
           choices = unique(data_summary$industry)
         )
       ),
-      box(
-        width = NULL,
-        status = "warning",
-        textInput(
-          inputId = "product",
-          label = "Search for a product:",
-          placeholder = "Ex: coffee"
-        )
-      ),
+      # box(
+      #   width = NULL,
+      #   status = "warning",
+      #   textInput(
+      #     inputId = "product",
+      #     label = "Search for a product:",
+      #     placeholder = "Ex: coffee"
+      #   )
+      # ),
       box(
         width = NULL,
         status = "warning",
