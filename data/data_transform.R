@@ -32,14 +32,14 @@ library(tidygeocoder)
 library(tidyverse)
 
 # set working directory
-setwd("/Users/GreenTea/projects/find_b_corp_app")
+setwd("/Users/GreenTea/projects/find_b_corp_app/data")
+
 
 # determine which data source to read in; load and transform it, if needed
-data <-
-  if (file.exists("b_corp_impact_data_with_lat_long.rds")) {
-    readRDS("b_corp_impact_data_with_lat_long.rds")
+if (file.exists("b_corp_impact_data_with_lat_long.rds")) {
+    data <- readRDS(file = "b_corp_impact_data_with_lat_long.rds")
   } else {
-      read.csv("https://query.data.world/s/qtnt2oj6vfmv43w5kcn4vlc5uf43fa",
+      data <- read.csv("https://query.data.world/s/qtnt2oj6vfmv43w5kcn4vlc5uf43fa",
                      header=TRUE,
                      stringsAsFactors=FALSE,
                      na.strings = c("", " ")
@@ -65,7 +65,7 @@ data <-
                 timeout = 40)
 
       # save dataset with lat/long details
-      saveRDS(data, "b_corp_impact_data_with_lat_long.rds")
+      saveRDS(data, file = "b_corp_impact_data_with_lat_long.rds")
   }
 
 # create indices for columns to retain for summary and detailed datasets
