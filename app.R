@@ -6,6 +6,19 @@
 #   Date:     December 2022
 #------------------------------------------------------------------#
 
+# load libraries
+library(shiny)
+library(shinydashboard)
+library(ggplot2)
+library(leaflet)
+library(dplyr)
+library(lubridate)
+library(stringr)
+library(tidygeocoder)
+library(tidyverse)
+
+# load data
+data_summary <- readRDS("data/b_corp_impact_data_summary.rds")
 
 # --------------------------------------------------------------------- #
 #   Shiny App Code
@@ -94,9 +107,6 @@ ui <- dashboardPage(
 server <- function(input, output) {
   
   data_filtered <- reactive({
-    
-    #load data
-    
     data_summary %>% 
       filter(industry == input$industry) %>%
       top_n(input$top_n, overall_score) %>%
