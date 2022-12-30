@@ -49,6 +49,20 @@ ui <- dashboardPage(
           choices = unique(data_summary$industry)
         )
       ),
+      
+      box(
+        width = NULL,
+        status = "warning",
+        selectInput(
+          inputId = "country", 
+          label = "Limit results by country:",
+          choices = unique(data_summary$country),
+          # how do I order countries alphabetically?
+          # select all option?
+          multiple = TRUE
+        )
+      ),
+      
       # box(
       #   width = NULL,
       #   status = "warning",
@@ -58,6 +72,7 @@ ui <- dashboardPage(
       #     placeholder = "Ex: coffee"
       #   )
       # ),
+      
       box(
         width = NULL,
         status = "warning",
@@ -108,7 +123,10 @@ server <- function(input, output) {
   
   data_filtered <- reactive({
     data_summary %>% 
-      filter(industry == input$industry) %>%
+      filter(
+        industry == input$industry,
+        country %in% input$country
+        ) %>%
       top_n(input$top_n, overall_score) %>%
       arrange(desc(overall_score))
   })
