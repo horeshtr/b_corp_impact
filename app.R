@@ -36,7 +36,7 @@ ui <- dashboardPage(
   # Sidebar with industry, product, and top N selectors 
   dashboardSidebar(disable = TRUE),
     
-  # Show a plot of top N companies by score, text descriptions of companies, and their locations
+  # Inputs for industry, country, and number of companies to display
   dashboardBody(
     column(
       width = 3,
@@ -46,9 +46,12 @@ ui <- dashboardPage(
         selectInput(
           inputId = "industry", 
           label = "Select an industry:",
-          choices = unique(data_summary$industry)
+          choices = sort(unique(data_summary$industry))
         )
       ),
+      
+      # should these be reactive to one another? 
+      #   e.g., if certain countries don't have apparel companies, should they not appear?
       
       box(
         width = NULL,
@@ -56,12 +59,14 @@ ui <- dashboardPage(
         selectInput(
           inputId = "country", 
           label = "Limit results by country:",
-          choices = unique(data_summary$country),
+          choices = sort(data_summary$country),
           # how do I order countries alphabetically?
           # select all option?
           multiple = TRUE
         )
       ),
+      
+      # also, visuals display nothing until at least one country is selected
       
       # box(
       #   width = NULL,
@@ -84,6 +89,7 @@ ui <- dashboardPage(
       )
     ),
     
+    # Display plot of top N companies by score, text descriptions of companies, and their locations
     column(
       width = 9,
       fluidRow(
