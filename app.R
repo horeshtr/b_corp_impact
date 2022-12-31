@@ -59,8 +59,7 @@ ui <- dashboardPage(
         selectInput(
           inputId = "country", 
           label = "Limit results by country:",
-          choices = sort(data_summary$country),
-          # how do I order countries alphabetically?
+          choices = NULL, # changed from: sort(data_summary$country)
           # select all option?
           multiple = TRUE
         )
@@ -127,6 +126,7 @@ ui <- dashboardPage(
 # Define server logic
 server <- function(input, output) {
   
+  # Create filtered dataset based on UI inputs
   data_filtered <- reactive({
     data_summary %>% 
       filter(
@@ -136,6 +136,23 @@ server <- function(input, output) {
       top_n(input$top_n, overall_score) %>%
       arrange(desc(overall_score))
   })
+  
+  # Create filtered countries list
+  industry <- reactive({
+    filter(data_summary, industry == input$industry)
+  })
+  
+  # Update country list based on selected industry
+  observeEvent(industry(), {
+    choices <- sort(unique(industry()$country))
+    updateSelectInput(
+      inputId = "country", 
+      choices = choices
+      )
+  })
+  
+  # Update industry list based on selected country or countries
+    # can I do that, or does it create a circular reference?
   
   # Value output for number of companies in selected industry
   output$company_count <- renderValueBox({
