@@ -24,7 +24,9 @@ data_summary <- readRDS("data/b_corp_impact_data_summary.rds")
 #   Shiny App Code
 # ----------------------------------------------------------------------#
 
-# Define UI for application that draws a histogram
+######################
+#   UI
+######################
 ui <- dashboardPage(
 
   # Change overall appearance
@@ -50,22 +52,20 @@ ui <- dashboardPage(
         )
       ),
       
-      # should these be reactive to one another? 
-      #   e.g., if certain countries don't have apparel companies, should they not appear?
+      # Can these be reactive to one another? 
+      #   Does that create a circular reference?
       
       box(
         width = NULL,
         status = "warning",
         selectInput(
           inputId = "country", 
-          label = "Limit results by country:",
-          choices = NULL, # changed from: sort(data_summary$country)
+          label = "Limit industry results by country:",
+          choices = NULL, # set to NULL to allow dynamic choices based on selected industry
           # select all option?
           multiple = TRUE
         )
       ),
-      
-      # also, visuals display nothing until at least one country is selected
       
       # box(
       #   width = NULL,
@@ -123,7 +123,10 @@ ui <- dashboardPage(
   )
 )
 
-# Define server logic
+
+######################
+#   SERVER
+######################
 server <- function(input, output) {
   
   # Create filtered dataset based on UI inputs
@@ -138,16 +141,17 @@ server <- function(input, output) {
   })
   
   # Create filtered countries list
-  industry <- reactive({
+  industry_filter <- reactive({
     filter(data_summary, industry == input$industry)
   })
   
   # Update country list based on selected industry
-  observeEvent(industry(), {
-    choices <- sort(unique(industry()$country))
+  observeEvent(industry_filter(), {
+    choices <- sort(unique(industry_filter()$country))
     updateSelectInput(
       inputId = "country", 
-      choices = choices
+      choices = choices,
+      selected = choices # fixes results display issue but a little clunky
       )
   })
   
